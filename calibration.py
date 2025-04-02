@@ -125,7 +125,7 @@ def find_aruco_pose(frame, camera_matrix, dist_coeffs, marker_length):
     #     distCoeff=dist_coeffs,
     # )
     # pose of aruco
-    marker_size = 35      # in mm
+    marker_size = marker_length      # in mm
     marker_points = np.array([[-marker_size / 2, marker_size / 2, 0],
                                 [marker_size / 2, marker_size / 2, 0],
                                 [marker_size / 2, -marker_size / 2, 0],
