@@ -25,12 +25,12 @@ The work, demo video and documentation is still in progress. So stay tunned... *
    ```
    pip3 install -r requirements.txt
    ```
-   > [!NOTE]
-   > Normal installation of **OpenCV** will result in issues with **RoboticsToolbox**.<br> To troubleshoot this issue install **Opencv-headless** package while running RTB. For example installation process [click here](./utils/cv2_install.py).
+> [!NOTE]
+> Normal installation of **OpenCV** will result in issues with **RoboticsToolbox**.<br> To troubleshoot this issue install **Opencv-headless** package while running RTB. For example installation process [click here](./utils/cv2_install.py).
 
 2. PLC Configuration: 
-    >[!IMPORTANT]
-    For PLC configuration check the this [README.md](./PLC_configurations/README.md) 
+>[!IMPORTANT]
+For PLC configuration check the this [README.md](./PLC_configurations/README.md) 
 
 3. Gripper Setup:
 4. Camera mount Setup
