@@ -5,7 +5,6 @@ import spatialmath as sm
 import matplotlib.pyplot as plt
 import roboticstoolbox as rtb
 from pycomm3 import LogixDriver
-from calibration import load_calib_data, find_aruco_pose
 from roboticstoolbox import DHRobot, RevoluteDH, RevoluteMDH
 
 # define the  robot class
@@ -67,8 +66,8 @@ class Fanuc(DHRobot):
             ),
         ]
 
-        tool = sm.base.transl(0, 0, 0.08)                   # no rotation for suction gripper  [tool_offset = 8cm]
-        # tool = sm.base.transl(0, 0, 0.025)                # checkboard tool (for calibration)
+        tool = sm.base.transl(0, 0, 0.13)                   # no rotation for servo gripper  [tool_offset = 13cm] -> tip of the gripper
+        # tool = sm.base.transl(0, 0, 0)                    # aruco board tool (for calibration)
 
         super().__init__(
             links=Links,
@@ -113,7 +112,7 @@ class Fanuc(DHRobot):
         print("Success in ikine")
 
         # plot robot and fkine
-        robot.plot(goalconfig.q, block=True)
+        self.plot(goalconfig.q, block=True)
         computed_tf = self.fkine(goalconfig.q)
         print(f"Computed TF:\n{computed_tf}")
 
@@ -148,7 +147,7 @@ class Fanuc(DHRobot):
                     plc.write(tag_name, value)
 
 
-    # control gripper
+    # control gripper (Servo gripper -> used firmata2 library)
     def on_gripper():
         pass
     def off_gripper():

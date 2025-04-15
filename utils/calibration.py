@@ -1,7 +1,7 @@
 import os
 import pickle
 # import spatialmath as sm
-# from fanuc_model import Fanuc
+from fanuc_model import Fanuc
 import numpy as np
 import cv2
 
@@ -109,23 +109,20 @@ def calibrate_camera_checkerboard(images, cols, rows, square_size, verbose=True)
 
     return rmse, camera_matrix, dist_coeffs
 
+### NOTE:
+# calibration aruco -> DICT_6X6_100
+# pick and place aruco -> DICT_4X4_50
 
-def find_aruco_pose(frame, camera_matrix, dist_coeffs, marker_length):
+def find_aruco_pose(frame, camera_matrix, dist_coeffs, marker_length, marker_dict=cv2.aruco.DICT_4X4_50):
     """Finds aruco marker pose."""
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+    aruco_dict = cv2.aruco.getPredefinedDictionary(marker_dict)          
     parameters = cv2.aruco.DetectorParameters()
     detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
     (corners, ids, rejected) = detector.detectMarkers(gray)
-    # corners, ids, _ = cv2.aruco.detectMarkers(
-    #     gray,
-    #     aruco_dict,
-    #     parameters=parameters,
-    #     cameraMatrix=camera_matrix,
-    #     distCoeff=dist_coeffs,
-    # )
+
     # pose of aruco
-    marker_size = marker_length      # in mm
+    marker_size = marker_length  # in mm
     marker_points = np.array([[-marker_size / 2, marker_size / 2, 0],
                                 [marker_size / 2, marker_size / 2, 0],
                                 [marker_size / 2, -marker_size / 2, 0],
@@ -133,23 +130,9 @@ def find_aruco_pose(frame, camera_matrix, dist_coeffs, marker_length):
     R_target2cam, t_target2cam = None, None
     if np.all(ids is not None):
         for i in range(len(ids)):
-            # rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(
-            #     corners=corners[i],
-            #     markerLength=marker_length,
-            #     cameraMatrix=camera_matrix,
-            #     distCoeffs=dist_coeffs,
-            # )
             ret, rvec, tvec = cv2.solvePnP(marker_points, corners[i], camera_matrix, dist_coeffs, False, cv2.SOLVEPNP_IPPE_SQUARE)    
             cv2.aruco.drawDetectedMarkers(frame, corners)
             cv2.drawFrameAxes(frame, camera_matrix, dist_coeffs, rvec, tvec,30,3)
-            # cv2.aruco.drawAxis(
-            #     image=frame,
-            #     cameraMatrix=camera_matrix,
-            #     distCoeffs=dist_coeffs,
-            #     rvec=rvec,
-            #     tvec=tvec,
-            #     length=50,
-            # )
             R_target2cam, _ = cv2.Rodrigues(rvec)
             t_target2cam = tvec.squeeze()
 
@@ -250,6 +233,7 @@ def collect_eye_hand_data_fanuc(
     cols,
     rows,
     square_size,
+    image_save_dir
 ):  
     """Collects eye hand calibration data."""
     target_poses = []
@@ -265,6 +249,7 @@ def collect_eye_hand_data_fanuc(
                 camera_matrix=camera_matrix,
                 dist_coeffs=dist_coeffs,
                 marker_length=marker_length,
+                marker_dict=cv2.aruco.DICT_6X6_100
             )
         else:
             R_target2cam, t_target2cam = find_checkerboard_pose(
@@ -295,8 +280,8 @@ def collect_eye_hand_data_fanuc(
                 count += 1
                 print(f"Collected data: {count}")
                 # save the image while performing hand eye calibration
-                cv2.imwrite(f"./calib_data/hand_eye_data/images/image{count}.png", frame)  
-
+                cv2.imwrite(f"{image_save_dir}/image{count}.png", frame)  
+                
     return target_poses, robot_ee_poses
 
 
@@ -324,6 +309,26 @@ def calibrate_eye_hand(
         t_gripper2base=t_gripper2base,
         R_target2cam=R_target2cam,
         t_target2cam=t_target2cam,
+        method=cv2.CALIB_HAND_EYE_DANIILIDIS     # ANDREFF method give accurate values
     )
 
     return R, t
+
+if __name__ == "__main__":
+    R_g2b = load_calib_data("./calib_data/hand_eye_data/R_g2b.pkl")
+    R_t2c = load_calib_data("./calib_data/hand_eye_data/R_t2c.pkl")
+    t_g2b = load_calib_data("./calib_data/hand_eye_data/t_g2b.pkl")
+    t_t2c = load_calib_data("./calib_data/hand_eye_data/t_t2c.pkl")
+
+    R, t = calibrate_eye_hand(
+        R_gripper2base=R_g2b,
+        t_gripper2base=t_g2b,
+        R_target2cam=R_t2c,
+        t_target2cam=t_t2c,
+        eye_to_hand=True
+    )
+    print("ANDREFF: ")
+    print(R,t,sep='\n')
+
+    # save_calib_data(R, "./calib_data/hand_eye_rotm.pkl")
+    # save_calib_data(t, "./calib_data/hand_eye_trans.pkl")

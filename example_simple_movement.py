@@ -1,12 +1,45 @@
-import roboticstoolbox as rtb
-import spatialmath as sm
-import pycomm3
+#!/home/logesh/rtb/rtb_env/bin/python3
+
+'''
+Description:
+    This script contains the example movement commands that utilizes Fanuc RTB model.
+    The file also contains some old function's that I wrote earlier to control robot. Now those function's are member function of Fanuc model class.
+    I have also tried trajectory planning using RTB package (check below).
+'''
+
 import time
 import numpy as np
-from pycomm3 import LogixDriver
+import spatialmath as sm
 from fanuc_model import Fanuc
 
+# simple motion script
+def main():
+    robot = Fanuc()
+    
+    home_tf = sm.SE3(0.29, 0.0, 0.08) * sm.SE3.RPY([0, -np.pi, 0], order="xyz")
+    home_mask = [0.25, 0.25, 0.25, 0.0, 0.0, 0.0]
 
+    tf1 = sm.SE3(0.35, 0.0, 0.05) * sm.SE3.RPY([0, np.pi, 0], order="xyz")
+    tf2 = sm.SE3(0.3, -0.2, 0.1) * sm.SE3.RPY([0, np.pi, 0], order="xyz")
+    tf3 = sm.SE3(0.2, 0.3, 0.05) * sm.SE3.RPY([0, np.pi, 0], order="xyz")
+    tf4 = sm.SE3(0.3, -0.3, 0.3) * sm.SE3.RPY([0, np.pi/2, 0], order="xyz")
+    tfs = [tf1, tf2, tf3, tf4]
+
+    # simple movements 
+    for tf in tfs:
+        robot.move_to(tf)
+        time.sleep(2)
+         
+    # go to home
+    robot.move_to(home_tf)
+
+
+if __name__ == "__main__":
+    main()
+
+
+# old functions (now integrated into Fanuc model class) -> check `fanuc_model.py` file.
+''' 
 # plc function
 def send_config(config):
     # modify the j2 and j3 angles (for fanuc robotic arm)
@@ -84,26 +117,9 @@ def wait_for_run(goal_config):
         time.sleep(0.5)
     print("Reached Goal Position")
 
-
 # main 
 PLC_IP = '192.168.1.7'      # ASRS PLC IP (Laptop -> ASRS PLC -> Fanuc PLC)
-
-robot = Fanuc()
-
-home_tf = sm.SE3(0.36, 0.0, 0.28)
-home_mask = [0.25, 0.25, 0.25, 0.0, 0.0, 0.0]
-tf1 = sm.SE3(0.35, 0.0, 0.05) * sm.SE3.RPY([0, np.pi, 0], order="xyz")
-tf2 = sm.SE3(0.3, -0.2, 0.1) * sm.SE3.RPY([0, np.pi, 0], order="xyz")
-tf3 = sm.SE3(0.2, 0.3, 0.05) * sm.SE3.RPY([0, np.pi, 0], order="xyz")
-tf4 = sm.SE3(0.3, -0.3, 0.3) * sm.SE3.RPY([0, np.pi/2, 0], order="xyz")
-tfs = [tf1, tf2, tf3, tf4]
-
-# simple movements 
-
-# for tf in tfs:
-#     sol_config = inverse_solver(tf)
-#     send_config(sol_config.q)
-#     wait_for_run(sol_config.q)                          # waits until robot reaches the sol_config
+'''
 
 # trajectory planning
 '''
@@ -115,14 +131,15 @@ for t in traj:
     send_config(conf.q)
     wait_for_run(conf.q)
 '''
+# example trajectory planning (WIP) below one works
+'''
 q1 = robot.qz
 traj = rtb.jtraj(q1, inverse_solver(tf2).q, 3)
 # print(traj)
 for t in traj.q:
     send_config(t)
     wait_for_run(t)
-
-
+'''
 '''
 inc = -0.30
 for i in range(-10,10,1):
@@ -132,7 +149,3 @@ for i in range(-10,10,1):
     wait_for_run(config.q)
     inc += 0.025        
 '''
-
-# go to home
-# send_config(robot.qz)
-# wait_for_run(robot.qz)
