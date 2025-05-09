@@ -62,7 +62,7 @@ class Fanuc(DHRobot):
                 d=-0.070,
                 a=0.0,
                 alpha=np.pi,
-                qlim=np.array(np.radians([-360, 360]))
+                qlim=np.array(np.radians([-180, 180]))      # -360, 360
             ),
         ]
 
@@ -79,7 +79,8 @@ class Fanuc(DHRobot):
         self.qz = np.zeros(6)
         self.addconfiguration("qz", self.qz)
         self.PLC_IP = '192.168.1.7'                         # ASRS PLC IP (Laptop -> ASRS PLC -> Fanuc PLC)
-
+        self.cur_tf = [0, 0, 0, 0, 0, 0]
+        self.show_plot = True
 
     # inverese kinematics function
     def __inverse_solver(self, tf):
@@ -112,7 +113,8 @@ class Fanuc(DHRobot):
         print("Success in ikine")
 
         # plot robot and fkine
-        self.plot(goalconfig.q, block=True)
+        if self.show_plot:
+            self.plot(goalconfig.q, block=True)
         computed_tf = self.fkine(goalconfig.q)
         print(f"Computed TF:\n{computed_tf}")
 
@@ -171,11 +173,15 @@ class Fanuc(DHRobot):
 
 
     # convert joint angles from fanuc to pose
-    def get_curpos(self):
+    def get_curpos(self, only_tf=False):
         '''
         Description:
             - The function reads the current position from above function and uses forward kinematics to compute current tf of ee.
             - Same modification is done to the cur_config (NOTE: Refer to project documentation)
+        
+        Args:
+            - only_tf : Bool (if true returns the entire tf) 
+
         Returns:
             - [Rotm, trans] : Transform from base_link to end-effector
         '''
@@ -186,6 +192,9 @@ class Fanuc(DHRobot):
         cur_config[1] = -cur_config[1]
         cur_config[2] = cur_config[2] - cur_config[1]
         cur_tf = self.fkine(cur_config)
+        
+        if (only_tf == True):
+            return cur_tf
         return [cur_tf.R, cur_tf.t]                         # returns as rotm, trans (as np.array())
 
 
@@ -218,12 +227,13 @@ class Fanuc(DHRobot):
 
 
     # move to function
-    def move_to(self, trans, orient):
+    def move_to_(self, trans, orient):
         '''
         Description:
             - The function takes goal translation and orientation of a point.
             - Calculates the joint angles using inverse kinematics and send the joint angle to the plc.
             - Waits until the joint angles reaches its target config 
+        
         Args:
             - trans:  ndarray or list (size = 3 & meters)  -> (X, Y, Z)
             - orient: ndarray or list (size = 3 & radians) -> (roll, pitch, yaw)  
@@ -246,12 +256,14 @@ class Fanuc(DHRobot):
             - The function takes goal translation and orientation of a point.
             - Calculates the joint angles using inverse kinematics and send the joint angle to the plc.
             - Waits until the joint angles reaches its target config 
+        
         Args:
             - tf : transform of (4x4 matrix) with orientation + translation [base_link to end-effector]
         '''
 
         # step 1: calculate goal config
         goalconfig = self.__inverse_solver(tf)
+        self.cur_tf = tf
         # step 2: send goalconfig to the plc
         self.__send_config(goalconfig.q)
         # step 3: wait until the goalconfig is reached
